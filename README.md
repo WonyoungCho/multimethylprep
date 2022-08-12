@@ -1,4 +1,4 @@
-# multimethylprep
+# multi-methylprep
 
 In order to make multi-processing idat files, replace below three files in a methylprep package.
 
