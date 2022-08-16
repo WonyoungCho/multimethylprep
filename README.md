@@ -93,6 +93,14 @@ def parse_sample_sheet_into_idat_datasets(sample_sheet, sample_name=None, from_s
 
 # pipeline.py
 ```python
+from .postprocess import (
+    ...
+    consolidate_values,
+    consolidate_values_for_sheet,
+    ...
+)
+
 import parmap
+
 
 ```
