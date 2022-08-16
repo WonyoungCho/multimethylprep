@@ -60,3 +60,36 @@ def consolidate_values_for_sheets(sample, postprocess_func_colname='beta_value',
     return df
 ```
 
+# sigset.py
+This function reads `idat` file in the designated directory.
+
+```python
+import multiprocessing as mp
+import parmap
+
+def collect_idats(sample,zip_reader=None):
+    green_filepath = sample.get_filepath('idat', Channel.GREEN)
+    green_idat = IdatDataset(green_filepath, channel=Channel.GREEN)
+    red_filepath = sample.get_filepath('idat', Channel.RED)
+    red_idat = IdatDataset(red_filepath, channel=Channel.RED)
+    return {'green_idat': green_idat, 'red_idat': red_idat, 'sample': sample}
+    
+def parse_sample_sheet_into_idat_datasets(sample_sheet, sample_name=None, from_s3=None, meta_only=False):
+...
+    if from_s3 and meta_only:
+        parser = RawMetaDataset
+        idat_datasets = [parser(sample) for sample in samples]
+    elif from_s3 and not meta_only:
+        #parser = RawDataset.from_sample_s3
+        zip_reader = from_s3
+        print('Reading IDATs ...')
+        idat_datasets = parmap.map(collect_idats, samples, zip_reader, pm_pbar=True, pm_processes=mp.cpu_count())
+
+    elif not from_s3 and not meta_only:
+        #parser = RawDataset.from_sample
+        print('Reading IDATs ...')
+        idat_datasets = parmap.map(collect_idats, samples, pm_pbar=True, pm_processes=mp.cpu_count())
+...
+```
+
+# pipeline.py
