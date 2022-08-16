@@ -7,9 +7,8 @@ In order to make multi-processing idat files, modify below three files in a meth
 - /home/user/.local/lib/python3.8/site-packages/methylprep/models/sigset.py
 
 # postprocess.py
-```
-consolidate_values_for_sheets() split into consolidate_values() and consolidate_values_for_sheets()
-```
+
+`consolidate_values_for_sheets()` split into `consolidate_values()` and `consolidate_values_for_sheets()`.
 
 ```python
 import parmap
@@ -93,3 +92,7 @@ def parse_sample_sheet_into_idat_datasets(sample_sheet, sample_name=None, from_s
 ```
 
 # pipeline.py
+```python
+import parmap
+
+```
