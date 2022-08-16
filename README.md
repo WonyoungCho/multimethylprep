@@ -33,7 +33,7 @@ def cli_process(cmd_args):
 ```
 
 # postprocess.py
-`consolidate_values_for_sheets()` split into `consolidate_values()` and `consolidate_values_for_sheets()`.
+Insert `consolidate_values()` and `consolidate_values_for_sheets()`.
 
 ```python
 import parmap
