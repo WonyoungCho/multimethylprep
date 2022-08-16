@@ -4,14 +4,35 @@
 $ pip install methylprep
 ```
 
-In order to make multi-processing `methylprep`, modify below three files in the methylprep package directory.
+In order to make multi-processing `methylprep`, modify below four files in the methylprep package directory.
 
+- /home/user/.local/lib/python3.8/site-packages/methylprep/cli.py
 - /home/user/.local/lib/python3.8/site-packages/methylprep/processing/pipeline.py
 - /home/user/.local/lib/python3.8/site-packages/methylprep/processing/postprocess.py
 - /home/user/.local/lib/python3.8/site-packages/methylprep/models/sigset.py
 
-# postprocess.py
+# cli.py
+```python
+import multiprocessing as mp
 
+def cli_process(cmd_args):
+    ...
+    parser.add_argument(
+        '-th', '--threads',
+        required=False,
+        type=int,
+        default=mp.cpu_count(),
+        help='Number of threads to run jobs (default : '+str(mp.cpu_count())+' ).'
+    )
+    ...
+    
+    run_pipeline(
+        ...
+        np=args.threads    
+        ...
+```
+
+# postprocess.py
 `consolidate_values_for_sheets()` split into `consolidate_values()` and `consolidate_values_for_sheets()`.
 
 ```python
