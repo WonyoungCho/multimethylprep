@@ -180,7 +180,7 @@ def save_df_to_file(df, data_dir, value_name, batch_size, batch_num):
         df = df.transpose() # put probes as columns for faster loading.
     df = df.astype('float32')
     df = df.sort_index().reindex(sorted(df.columns), axis=1)
-    df.to_parquet(Path(data_dir, pkl_name+'.par'), compression='gzip')
+    df.to_parquet(Path(data_dir, pkl_name+'.par'))
     LOGGER.info(f"saved {pkl_name}")
     
     
@@ -217,7 +217,6 @@ def run_pipeline():
         funcDict = {'beta_value':'beta','m_value':'m','noob_meth':'noob_meth','noob_unmeth':'noob_unmeth',
                     'meth':'meth', 'unmeth':'unmeth', 'poobah_pval':'poobah'}
 
-
         if betas:
             df = consolidate_values(batch_data_containers, postprocess_func_colname='beta_value', bit=bit, poobah=poobah, exclude_rs=True, np=np)
             save_df_to_file(df, data_dir, 'beta', batch_size, batch_num)
@@ -234,6 +233,20 @@ def run_pipeline():
             df = consolidate_values(batch_data_containers, postprocess_func_colname='noob_unmeth', bit=bit, poobah=poobah, exclude_rs=True, np=np)
             save_df_to_file(df, data_dir, 'noob_unmeth', batch_size, batch_num)
 
+        #if (betas or m_value) and save_uncorrected:
+        if save_uncorrected:
+            df = consolidate_values(batch_data_containers, postprocess_func_colname='meth', bit=bit, poobah=False, exclude_rs=True, np=np)
+            save_df_to_file(df, data_dir, 'meth', batch_size, batch_num)
 
+            # TWO PARTS
+            df = consolidate_values(batch_data_containers, postprocess_func_colname='unmeth', bit=bit, poobah=False, exclude_rs=True, np=np)
+            save_df_to_file(df, data_dir, 'unmeth', batch_size, batch_num)
+
+        if export_poobah:
+            if all(['poobah_pval' in e._SampleDataContainer__data_frame.columns for e in batch_data_containers]):
+                # this option will save a pickled dataframe of the pvalues for all samples, with sample_ids in the column headings and probe names in index.
+                # this sets poobah to false in kwargs, otherwise some pvalues would be NaN I think.
+                df = consolidate_values(batch_data_containers, postprocess_func_colname='poobah_pval', bit=bit, poobah=False, poobah_sig=poobah_sig, exclude_rs=True, np=np)
+                save_df_to_file(df, data_dir, 'poobah', batch_size, batch_num)
     ...
 ```
