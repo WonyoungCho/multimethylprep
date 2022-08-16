@@ -1,6 +1,10 @@
 # multi-methylprep
 
-In order to make multi-processing idat files, modify below three files in a methylprep package.
+```bash
+$ pip install methylprep
+```
+
+In order to make multi-processing `methylprep`, modify below three files in the methylprep package directory.
 
 - /home/user/.local/lib/python3.8/site-packages/methylprep/processing/pipeline.py
 - /home/user/.local/lib/python3.8/site-packages/methylprep/processing/postprocess.py
@@ -92,6 +96,8 @@ def parse_sample_sheet_into_idat_datasets(sample_sheet, sample_name=None, from_s
 ```
 
 # pipeline.py
+
+
 ```python
 from .postprocess import (
     ...
@@ -102,5 +108,132 @@ from .postprocess import (
 
 import parmap
 
+def processing_idats(idat_dataset_pair, manifest, save_uncorrected, bit, do_infer_channel_switch,
+                     sesame, quality_mask, do_noob, poobah, poobah_decimals, poobah_sig,
+                     do_nonlinear_dye_bias, kwargs,
+                     export, save_control, low_memory):
+    data_container = SampleDataContainer(
+        idat_dataset_pair,
+        manifest=manifest,
+        retain_uncorrected_probe_intensities=save_uncorrected,
+        bit=bit,
+        switch_probes=(do_infer_channel_switch or sesame), # this applies all sesame-specific options
+        quality_mask= (quality_mask or sesame or False), # this applies all sesame-specific options (beta / noob offsets too)
+        do_noob=(do_noob if do_noob != None else True), # None becomes True, but make_pipeline can override with False
+        pval=poobah, #defaults to False as of v1.4.0
+        poobah_decimals=poobah_decimals,
+        poobah_sig=poobah_sig,
+        do_nonlinear_dye_bias=do_nonlinear_dye_bias, # start of run_pipeline sets this to True, False, or None
+        debug=kwargs.get('debug',False),
+        sesame=sesame,
+    )
 
+    data_container.process_all()
+
+    output_path = None;
+    noob_error = None; raw_error = None;
+    sample_id = None; control_df = None
+
+    if export: # as CSV
+        output_path = data_container.sample.get_export_filepath()
+        data_container.export(output_path)
+
+        # this tidies-up the tqdm by moving errors to end of batch warning.
+        if data_container.noob_processing_missing_probe_errors != []:
+            noob_error = data_container.noob_processing_missing_probe_errors
+
+        if data_container.raw_processing_missing_probe_errors != []:
+            raw_error = data_container.raw_processing_missing_probe_errors
+
+    if save_control: # Process and consolidate now. Keep in memory. These files are small.
+        sample_id = f"{data_container.sample.sentrix_id}_{data_container.sample.sentrix_position}"
+        control_df = one_sample_control_snp(data_container)
+        testset[sample_id] = control_df
+        print(testset)
+
+    # now I can drop all the unneeded stuff from each SampleDataContainer (400MB per sample becomes 92MB)
+    # these are stored in SampleDataContainer.__data_frame for processing.
+    if low_memory is True:
+        # use data_frame values instead of these class objects, because they're not in sesame SigSets.
+        del data_container.man
+        del data_container.snp_man
+        del data_container.ctl_man
+        del data_container.green_idat
+        del data_container.red_idat
+        del data_container.data_channel
+        del data_container.methylated
+        del data_container.unmethylated
+        del data_container.oobG
+        del data_container.oobR
+        del data_container.ibG
+        del data_container.ibR
+
+    return data_container, sample_id, control_df, noob_error, raw_error, output_path
+
+
+def save_df_to_file(df, data_dir, value_name, batch_size, batch_num):
+    if not batch_size:
+        pkl_name = value_name+'_values'
+    else:
+        pkl_name = f'{value_name}_values_{batch_num}'
+    if df.shape[1] > df.shape[0]:
+        df = df.transpose() # put probes as columns for faster loading.
+    df = df.astype('float32')
+    df = df.sort_index().reindex(sorted(df.columns), axis=1)
+    df.to_parquet(Path(data_dir, pkl_name+'.par'), compression='gzip')
+    LOGGER.info(f"saved {pkl_name}")
+    
+    
+
+def run_pipeline():
+    ...
+    for batch_num, batch in enumerate(batches, 1):
+    ...
+        batch_data_containers = []
+        export_paths = set() # inform CLI user where to look
+
+        print('Processing samples ...')
+        data_containers = parmap.map(
+            processing_idats, idat_datasets, manifest, save_uncorrected, bit,
+            do_infer_channel_switch, sesame, quality_mask, do_noob, poobah,
+            poobah_decimals, poobah_sig, do_nonlinear_dye_bias, kwargs,
+            export, save_control, low_memory,
+            pm_pbar=True, pm_processes=np
+        )
+
+        del idat_datasets
+
+        for i in range(len(data_containers)):
+            batch_data_containers.append(data_containers[i][0])
+            if data_containers[i][1] != None: control_snps[data_containers[i][1]] = data_containers[i][2]
+            if data_containers[i][3] != None: missing_probe_errors['noob'].extend(data_containers[i][3])
+            if data_containers[i][4] != None: missing_probe_errors['raw'].extend(data_containers[i+4])
+            if data_containers[i][5] != None: export_paths.add(data_containers[i][5])
+
+        del data_containers
+
+        if kwargs.get('debug'): LOGGER.info('[finished SampleDataContainer processing]')
+
+        funcDict = {'beta_value':'beta','m_value':'m','noob_meth':'noob_meth','noob_unmeth':'noob_unmeth',
+                    'meth':'meth', 'unmeth':'unmeth', 'poobah_pval':'poobah'}
+
+
+        if betas:
+            df = consolidate_values(batch_data_containers, postprocess_func_colname='beta_value', bit=bit, poobah=poobah, exclude_rs=True, np=np)
+            save_df_to_file(df, data_dir, 'beta', batch_size, batch_num)
+
+        if m_value:
+            df = consolidate_values(batch_data_containers, postprocess_func_colname='m_value', bit=bit, poobah=poobah, exclude_rs=True, np=np)
+            save_df_to_file(df, data_dir, 'm', batch_size, batch_num)
+
+        if (do_save_noob is not False) or betas or m_value:
+            df = consolidate_values(batch_data_containers, postprocess_func_colname='noob_meth', bit=bit, poobah=poobah, exclude_rs=True, np=np)
+            save_df_to_file(df, data_dir, 'noob_meth', batch_size, batch_num)
+
+            # TWO PARTS
+            df = consolidate_values(batch_data_containers, postprocess_func_colname='noob_unmeth', bit=bit, poobah=poobah, exclude_rs=True, np=np)
+            save_df_to_file(df, data_dir, 'noob_unmeth', batch_size, batch_num)
+
+
+    ...
 ```
