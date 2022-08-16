@@ -129,6 +129,8 @@ from .postprocess import (
 
 import parmap
 
+testset = {}
+
 def processing_idats(idat_dataset_pair, manifest, save_uncorrected, bit, do_infer_channel_switch,
                      sesame, quality_mask, do_noob, poobah, poobah_decimals, poobah_sig,
                      do_nonlinear_dye_bias, kwargs,
@@ -169,8 +171,7 @@ def processing_idats(idat_dataset_pair, manifest, save_uncorrected, bit, do_infe
     if save_control: # Process and consolidate now. Keep in memory. These files are small.
         sample_id = f"{data_container.sample.sentrix_id}_{data_container.sample.sentrix_position}"
         control_df = one_sample_control_snp(data_container)
-        testset[sample_id] = control_df
-        print(testset)
+        #testset[sample_id] = control_df
 
     # now I can drop all the unneeded stuff from each SampleDataContainer (400MB per sample becomes 92MB)
     # these are stored in SampleDataContainer.__data_frame for processing.
