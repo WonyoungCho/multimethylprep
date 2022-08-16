@@ -127,7 +127,6 @@ from .postprocess import (
     ...
 )
 
-import multiprocessing as mp
 import parmap
 
 def processing_idats(idat_dataset_pair, manifest, save_uncorrected, bit, do_infer_channel_switch,
@@ -206,7 +205,7 @@ def save_df_to_file(df, data_dir, value_name, batch_size, batch_num):
     LOGGER.info(f"saved {pkl_name}")
     
     
-
+def run_pipeline(np=1,):
     ...
     for batch_num, batch in enumerate(batches, 1):
     ...
