@@ -139,7 +139,7 @@ def cli_process(cmd_args):
         '-b', '--betas',
         required=False,
         action='store_true',
-        default=False,
+        default=True,
         help='If passed, output returns a dataframe of beta values for samples x probes. Local file beta_values.npy is also created.',
     )
 
@@ -225,7 +225,7 @@ def cli_process(cmd_args):
     parser.add_argument(
         '-f', '--file_format',
         required=False,
-        default='pickle',
+        default='parquet',
         help='Specify `parquet` instead of default `pickle`'
     )
 
