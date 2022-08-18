@@ -66,6 +66,7 @@ def parse_sample_sheet_into_idat_datasets(sample_sheet, sample_name=None, from_s
 
 # postprocess.py
 - Insert `consolidate_values()` and `consolidate_values_for_sheets()`.
+- Change parquet suffix `parquet` to `par`.
 
 ```python
 import parmap
@@ -120,6 +121,7 @@ def consolidate_values_for_sheets(sample, postprocess_func_colname='beta_value',
 
 - Replace `consolidate_values_for_sheet()` to `consolidate_values(..., np=np)` in `if {beta_values, m_values, ...}`.
 - Take `_prepare_save_out_file()` out and add more arguments, `_prepare_save_out_file(data_dir, df, file_stem, batch_size, batch_num, file_format, uint16=False)`.
+- Change parquet suffix `parquet` to `par`.
 
 ```python
 from .postprocess import (
