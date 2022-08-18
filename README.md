@@ -12,8 +12,8 @@ In order to make multi-processing `methylprep (1.7.1)`, replace below four files
 - /home/user/.local/lib/python3.8/site-packages/methylprep/models/sigset.py
 
 # cli.py
-- beta, default=True
-- file_format, default='parquet'
+- beta, `default=True` .
+- file_format, `default='parquet'`
 
 ```python
 import multiprocessing as mp
