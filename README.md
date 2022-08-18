@@ -189,18 +189,23 @@ def processing_idats(idat_dataset_pair, manifest, save_uncorrected, bit, do_infe
 
     return data_container, sample_id, control_df, noob_error, raw_error, output_path
 
-
-def save_df_to_file(df, data_dir, value_name, batch_size, batch_num):
-    if not batch_size:
-        pkl_name = value_name+'_values'
+    
+def _prepare_save_out_file(data_dir, df, file_stem, batch_size, batch_num, file_format, uint16=False):
+    out_name = f"{file_stem}_{batch_num}" if batch_size else file_stem
+    if uint16 and file_format != 'parquet':
+        df = df.astype('float32') if df.isna().sum().sum() > 0 else df.astype('uint16')
     else:
-        pkl_name = f'{value_name}_values_{batch_num}'
+        df = df.astype('float32')
     if df.shape[1] > df.shape[0]:
         df = df.transpose() # put probes as columns for faster loading.
-    df = df.astype('float32')
+    # sort sample names
     df = df.sort_index().reindex(sorted(df.columns), axis=1)
-    df.to_parquet(Path(data_dir, pkl_name+'.par'))
-    LOGGER.info(f"saved {pkl_name}")
+    if file_format == 'parquet':
+        # put probes in rows; format is optimized for same-type storage so it won't really matter
+        df.to_parquet(Path(data_dir,f"{out_name}.par"))
+    else:
+        df.to_pickle(Path(data_dir, f"{out_name}.pkl"))
+    LOGGER.info(f"saved {out_name}")
     
     
 def run_pipeline(np=1,):
@@ -237,34 +242,40 @@ def run_pipeline(np=1,):
 
         if betas:
             df = consolidate_values(batch_data_containers, postprocess_func_colname='beta_value', bit=bit, poobah=poobah, exclude_rs=True, np=np)
-            save_df_to_file(df, data_dir, 'beta', batch_size, batch_num)
+            _prepare_save_out_file(data_dir, df, 'beta_values', batch_size, batch_num, file_format)
 
         if m_value:
             df = consolidate_values(batch_data_containers, postprocess_func_colname='m_value', bit=bit, poobah=poobah, exclude_rs=True, np=np)
-            save_df_to_file(df, data_dir, 'm', batch_size, batch_num)
+            _prepare_save_out_file(data_dir, df, 'm_values', batch_size, batch_num, file_format)
 
         if (do_save_noob is not False) or betas or m_value:
             df = consolidate_values(batch_data_containers, postprocess_func_colname='noob_meth', bit=bit, poobah=poobah, exclude_rs=True, np=np)
-            save_df_to_file(df, data_dir, 'noob_meth', batch_size, batch_num)
+            _prepare_save_out_file(data_dir, df, 'noob_meth_values', batch_size, batch_num, file_format, uint16=True)
 
             # TWO PARTS
             df = consolidate_values(batch_data_containers, postprocess_func_colname='noob_unmeth', bit=bit, poobah=poobah, exclude_rs=True, np=np)
-            save_df_to_file(df, data_dir, 'noob_unmeth', batch_size, batch_num)
+            _prepare_save_out_file(data_dir, df, 'noob_unmeth_values', batch_size, batch_num, file_format, uint16=True)
 
         #if (betas or m_value) and save_uncorrected:
         if save_uncorrected:
             df = consolidate_values(batch_data_containers, postprocess_func_colname='meth', bit=bit, poobah=False, exclude_rs=True, np=np)
-            save_df_to_file(df, data_dir, 'meth', batch_size, batch_num)
+            _prepare_save_out_file(data_dir, df, 'meth_values', batch_size, batch_num, file_format, uint16=True)
 
             # TWO PARTS
             df = consolidate_values(batch_data_containers, postprocess_func_colname='unmeth', bit=bit, poobah=False, exclude_rs=True, np=np)
-            save_df_to_file(df, data_dir, 'unmeth', batch_size, batch_num)
+            _prepare_save_out_file(data_dir, df, 'unmeth_values', batch_size, batch_num, file_format, uint16=True)
 
         if export_poobah:
             if all(['poobah_pval' in e._SampleDataContainer__data_frame.columns for e in batch_data_containers]):
                 # this option will save a pickled dataframe of the pvalues for all samples, with sample_ids in the column headings and probe names in index.
                 # this sets poobah to false in kwargs, otherwise some pvalues would be NaN I think.
                 df = consolidate_values(batch_data_containers, postprocess_func_colname='poobah_pval', bit=bit, poobah=False, poobah_sig=poobah_sig, exclude_rs=True, np=np)
-                save_df_to_file(df, data_dir, 'poobah', batch_size, batch_num)
+                _prepare_save_out_file(data_dir, df, 'poobah_values', batch_size, batch_num, file_format)
+                
+            if all(['pNegECDF_pval' in e._SampleDataContainer__data_frame.columns for e in batch_data_containers]):
+                # this option will save negative control based pvalues for all samples, with
+                # sample_ids in the column headings and probe names in index.
+                df = consolidate_values(batch_data_containers, postprocess_func_colname='pNegECDF_pval', bit=bit, poobah=False, poobah_sig=poobah_sig, exclude_rs=True, np=np)
+                _prepare_save_out_file(data_dir, df, 'pNegECDF_values', batch_size, batch_num, file_format)
     ...
 ```
