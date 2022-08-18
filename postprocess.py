@@ -261,7 +261,7 @@ def merge_batches(num_batches, data_dir, filepattern, file_format):
     this will merge the _1, _2, ..._X batches into a single file in data_dir.
     """
     dfs = []
-    suffix = 'parquet' if file_format == 'parquet' else 'pkl'
+    suffix = 'par' if file_format == 'parquet' else 'pkl'
     for num in range(num_batches):
         try:
             filename = f"{filepattern}_{num+1}.{suffix}"
