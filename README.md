@@ -4,7 +4,7 @@
 $ pip install methylprep
 ```
 
-In order to make multi-processing `methylprep`, modify below four files in the methylprep package directory.
+In order to make multi-processing `methylprep (1.7.1)`, replace below four files in the methylprep package directory.
 
 - /home/user/.local/lib/python3.8/site-packages/methylprep/cli.py
 - /home/user/.local/lib/python3.8/site-packages/methylprep/processing/pipeline.py
